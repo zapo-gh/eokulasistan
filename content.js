@@ -63,6 +63,15 @@ function enYakinSecenegiBul(hedefNorm, adaylar, metinFn) {
     // 4) ÖĞRETMEN ATAMA MOTORU
     // ============================================================
 
+    // e-Okul'un gerçek "Kaydet" araç çubuğu resmine tıklayıp (onclick="AlanKontrolveKayit()")
+    // kaydı tetikler; satır kendiliğinden boşalıp hazır hale gelince döngüyü devam ettirir.
+    function eOkulKaydetTetikle() {
+        const kaydetImg = document.querySelector('#OOMToolbarActive1_kaydet_b img');
+        if (!kaydetImg) { setTimeout(eOkulKaydetTetikle, 500); return; }
+        kaydetImg.click();
+        setTimeout(siradakiDersiAta, 900);
+    }
+
     function siradakiDersiAta() {
         chrome.storage.local.get(['eokul_bot_durum', 'eokul_pdf_veri'], function (res) {
             if (!res.eokul_bot_durum || res.eokul_bot_durum.islem !== 'OGRETMEN_ATA') return;
@@ -92,7 +101,7 @@ function enYakinSecenegiBul(hedefNorm, adaylar, metinFn) {
             }
 
             if (ddlDers.disabled || ddlOgr.disabled) {
-                eOkulYeniKayitTetikle();
+                setTimeout(siradakiDersiAta, 800);
                 return;
             }
 
