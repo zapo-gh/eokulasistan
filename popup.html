@@ -65,9 +65,11 @@
     /* ── PDF Yükleme ── */
     .upload-zone {
       border: 2px dashed #2d3748;
-      border-radius: 10px;
-      padding: 14px 12px;
-      text-align: center;
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
       cursor: pointer;
       transition: all 0.25s;
       background: #141824;
@@ -87,9 +89,9 @@
       opacity: 0;
       cursor: pointer;
     }
-    .upload-icon { font-size: 22px; margin-bottom: 5px; }
-    .upload-text { font-size: 12px; color: #718096; }
-    .upload-text strong { color: #a0aec0; display: block; margin-top: 2px; font-size: 11px; }
+    .upload-icon { font-size: 17px; flex-shrink: 0; }
+    .upload-text { font-size: 11px; color: #718096; text-align: left; line-height: 1.3; }
+    .upload-text strong { color: #4a5568; display: block; margin-top: 1px; font-size: 9.5px; font-weight: 400; }
 
     /* ── Status badge ── */
     .status-row {
@@ -167,6 +169,9 @@
       background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
       color: #bee3f8;
       border: 1px solid #2d7dd2;
+      padding: 7px 14px;
+      margin-top: 8px;
+      margin-bottom: 6px;
     }
     .btn-analyze:hover:not(:disabled) {
       background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
@@ -289,14 +294,6 @@
     }
     .sube-select:focus { border-color: #4299e1; }
     .sube-select:hover { border-color: #63b3ed; }
-
-    /* ── Footer ── */
-    .footer {
-      padding: 10px 16px;
-      font-size: 10px;
-      color: #2d3748;
-      text-align: center;
-    }
   </style>
 </head>
 <body>
@@ -380,8 +377,6 @@
       🛑 Döngüyü Durdur / Sıfırla
     </button>
   </div>
-
-  <div class="footer">e-Okul Yabil Ders Programı Asistanı — PDF Destekli</div>
 
   <script type="module" src="popup.js"></script>
 </body>
