@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { max-height: 600px; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      width: 340px;
+      background: #0f1117;
+      color: #e2e8f0;
+      overflow-y: auto;
+    }
+    body::-webkit-scrollbar { width: 6px; }
+    body::-webkit-scrollbar-track { background: #0f1117; }
+    body::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%);
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid #2d3748;
+    }
+    .header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #63b3ed;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .header p {
+      font-size: 11px;
+      color: #718096;
+      margin-top: 5px;
+    }
+
+    /* ── Sections ── */
+    .section {
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e2535;
+    }
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #4a5568;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .section-hint {
+      font-size: 9.5px;
+      color: #4a5568;
+      text-transform: none;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    /* ── PDF Yükleme ── */
+    .upload-zone {
+      border: 2px dashed #2d3748;
+      border-radius: 10px;
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      background: #141824;
+      position: relative;
+    }
+    .upload-zone:hover {
+      border-color: #4299e1;
+      background: #162032;
+    }
+    .upload-zone.has-file {
+      border-color: #38a169;
+      background: #0d1f15;
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .upload-icon { font-size: 22px; margin-bottom: 5px; }
+    .upload-text { font-size: 12px; color: #718096; }
+    .upload-text strong { color: #a0aec0; display: block; margin-top: 2px; font-size: 11px; }
+
+    /* ── Status badge ── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #141824;
+      margin-top: 10px;
+      min-height: 34px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.gray  { background: #4a5568; }
+    .status-dot.blue  { background: #4299e1; animation: pulse 1.2s infinite; }
+    .status-dot.green { background: #48bb78; }
+    .status-dot.red   { background: #fc8181; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .status-text { font-size: 11px; color: #a0aec0; flex: 1; line-height: 1.4; }
+
+    /* ── Şube bilgisi ── */
+    .sube-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #141824;
+      font-size: 11px;
+    }
+    .sube-label { color: #718096; }
+    .sube-name  { color: #63b3ed; font-weight: 600; font-size: 12px; }
+    .sube-count { color: #68d391; font-size: 10px; }
+
+    /* ── Butonlar ── */
+    .btn {
+      width: 100%;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      border: none;
+      border-radius: 9px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      letter-spacing: 0.2px;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn:disabled:hover { transform: none; }
+    .btn:last-child { margin-bottom: 0; }
+    .btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+
+    .btn-step {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.14);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .btn-label { flex: 1; text-align: left; }
+
+    .btn-analyze {
+      background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
+      color: #bee3f8;
+      border: 1px solid #2d7dd2;
+    }
+    .btn-analyze:hover:not(:disabled) {
+      background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-verify {
+      background: linear-gradient(135deg, #553c9a 0%, #44337a 100%);
+      color: #d6bcfa;
+      border: 1px solid #6b46c1;
+    }
+    .btn-verify:hover:not(:disabled) {
+      background: linear-gradient(135deg, #6b46c1 0%, #553c9a 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-ogretmen {
+      background: linear-gradient(135deg, #276749 0%, #22543d 100%);
+      color: #9ae6b4;
+      border: 1px solid #2f855a;
+    }
+    .btn-ogretmen:hover:not(:disabled) {
+      background: linear-gradient(135deg, #2f855a 0%, #276749 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-haftalik {
+      background: linear-gradient(135deg, #744210 0%, #5f370e 100%);
+      color: #fbd38d;
+      border: 1px solid #975a16;
+    }
+    .btn-haftalik:hover:not(:disabled) {
+      background: linear-gradient(135deg, #975a16 0%, #744210 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-ekders {
+      background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+      color: #a7f3d0;
+      border: 1px solid #059669;
+    }
+    .btn-ekders:hover:not(:disabled) {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-reset {
+      background: transparent;
+      color: #fc8181;
+      border: 1px dashed #63171b;
+      margin-top: 10px;
+      font-size: 11px;
+      justify-content: center;
+    }
+    .btn-reset:hover:not(:disabled) {
+      background: #2a1416;
+      border-color: #9b2c2c;
+      transform: none;
+    }
+
+    /* ── Şube listesi ── */
+    #subeListesi {
+      max-height: 120px;
+      overflow-y: auto;
+      margin-top: 8px;
+    }
+    #subeListesi::-webkit-scrollbar { width: 4px; }
+    #subeListesi::-webkit-scrollbar-track { background: #141824; }
+    #subeListesi::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+
+    .sube-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 10px;
+      border-radius: 6px;
+      margin-bottom: 3px;
+      background: #141824;
+      font-size: 11px;
+    }
+    .sube-item-name { color: #63b3ed; font-weight: 600; }
+    .sube-item-detail { color: #718096; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #1e2535;
+      margin: 0;
+    }
+
+    /* ── Şube seçim kartı ── */
+    .sube-secim-card {
+      background: #141824;
+      border: 1px solid #232b3d;
+      border-left: 3px solid #4299e1;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .sube-secim-label {
+      font-size: 11px;
+      color: #a0aec0;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sube-select {
+      width: 100%;
+      padding: 7px 28px 7px 10px;
+      border-radius: 6px;
+      background: #1a202c url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%2363b3ed'/></svg>") no-repeat right 10px center;
+      color: #e2e8f0;
+      border: 1px solid #4a5568;
+      font-size: 11.5px;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .sube-select:focus { border-color: #4299e1; }
+    .sube-select:hover { border-color: #63b3ed; }
+
+    /* ── Footer ── */
+    .footer {
+      padding: 10px 16px;
+      font-size: 10px;
+      color: #2d3748;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h3>⚡ e-Okul Asistanı <span style="color:#4a5568;font-size:10px;font-weight:400">v2.0</span></h3>
+    <p>PDF yükleyerek tüm işlemleri otomatik yapın</p>
+  </div>
+
+  <!-- PDF Yükleme -->
+  <div class="section">
+    <div class="section-title">
+      <span>📄 PDF Analizi</span>
+      <span class="section-hint">1. adım</span>
+    </div>
+    <div class="upload-zone" id="uploadZone" title="e-Okul'dan indirdiğiniz sınıf programı PDF'ini seçin">
+      <input type="file" id="pdfDosya" accept=".pdf" />
+      <div class="upload-icon" id="uploadIcon">📑</div>
+      <div class="upload-text">
+        SinifProgrami.pdf seçin
+        <strong>Sürükleyin veya tıklayın</strong>
+      </div>
+    </div>
+
+    <button class="btn btn-analyze" id="btnAnaliz" disabled title="Seçilen PDF'i tarayıp ders/öğretmen/program verisini çıkarır">
+      🔍 PDF'i Analiz Et
+    </button>
+
+    <div class="status-row">
+      <div class="status-dot gray" id="statusDot"></div>
+      <div class="status-text" id="statusText">PDF seçilmedi</div>
+    </div>
+  </div>
+
+  <!-- Yüklenen Şubeler -->
+  <div class="section" id="subeSection" style="display:none">
+    <div class="section-title">📚 Yüklenen Şubeler</div>
+    <div id="subeListesi"></div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- İşlem Butonları -->
+  <div class="section">
+    <div class="section-title">
+      <span>⚙️ e-Okul İşlemleri</span>
+      <span class="section-hint">sırasıyla uygulayın</span>
+    </div>
+
+    <div id="subeSecimAlani" class="sube-secim-card" style="display: none;">
+      <label for="subeManuelSecici" class="sube-secim-label">
+        <span class="btn-step" style="background:rgba(99,179,237,0.18);color:#63b3ed;">1</span>
+        Hangi program uygulansın?
+      </label>
+      <select id="subeManuelSecici" class="sube-select">
+        <option value="">(Otomatik Algıla)</option>
+      </select>
+    </div>
+
+    <div id="subeAktif" class="sube-info" style="display:none;margin-bottom:10px;">
+      <span class="sube-label">Aktif şube:</span>
+      <span class="sube-name" id="subeAktifAdi">—</span>
+    </div>
+    <button class="btn btn-verify" id="btnDogrula" disabled title="PDF'teki şube ile e-Okul'da açık olan şubenin aynı olduğunu kontrol eder">
+      <span class="btn-step">2</span>
+      <span class="btn-label">🔗 Eşleştirmeyi Doğrula</span>
+    </button>
+    <button class="btn btn-ogretmen" id="btnOgretmenAta" disabled title="Seçili şubenin derslerine PDF'teki öğretmenleri otomatik atar">
+      <span class="btn-step">3</span>
+      <span class="btn-label">👨‍🏫 Öğretmenleri Otomatik Ata</span>
+    </button>
+    <button class="btn btn-haftalik" id="btnHaftalikDoldur" disabled title="Haftalık ders programı tablosunu PDF'e göre otomatik doldurur">
+      <span class="btn-step">4</span>
+      <span class="btn-label">📅 Haftalık Tabloyu Doldur</span>
+    </button>
+    <button class="btn btn-ekders" id="btnEkDersDoldur" disabled title="Seçmeli ve ortak dersleri tabloda işaretler">
+      <span class="btn-step">5</span>
+      <span class="btn-label">☑️ Seçmeli ve Ortak Dersleri İşaretle</span>
+    </button>
+    <button class="btn btn-reset" id="btnSifirla" title="Yüklenen PDF verisini ve seçimleri temizler">
+      🛑 Döngüyü Durdur / Sıfırla
+    </button>
+  </div>
+
+  <div class="footer">e-Okul Yabil Ders Programı Asistanı — PDF Destekli</div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
