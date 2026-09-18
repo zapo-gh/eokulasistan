@@ -144,6 +144,9 @@ ui.btnHaftalikDoldur.addEventListener('click', () => {
         alert(res.hata);
       } else if (res && res.sayac !== undefined) {
         let msg = `✅ ${res.sayac} ders başarıyla seçildi.`;
+        if (res.temizlenen) {
+            msg += `\n🧹 ${res.temizlenen} hücrede önceki programdan kalan seçim temizlendi.`;
+        }
         if (res.bulunamayanlar && res.bulunamayanlar.length > 0) {
             msg += `\n\n❌ Şu dersler tabloda eşleştirilemedi:\n` + res.bulunamayanlar.join('\n');
             alert(msg);

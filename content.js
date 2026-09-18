@@ -203,15 +203,27 @@ function enYakinSecenegiBul(hedefNorm, adaylar, metinFn) {
             }
 
             let sayac = 0;
+            let temizlenen = 0;
             let bulunamayanlar = [];
             const gunler = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma'];
 
             gunler.forEach(gun => {
                 const dersler = prog[gun] || [];
                 dersler.forEach((dersAdi, index) => {
-                    if (!dersAdi) return;
                     const el = document.getElementById(`dgListe_ddlDersAdi${gun}_${index}`);
                     if (!el) return;
+
+                    if (!dersAdi) {
+                        // Yeni PDF'e göre bu saatte ders yok: eski programdan kalan bir
+                        // seçim varsa, tespit edilebilen "boş" seçeneğe çekip temizle.
+                        const bosOpt = Array.from(el.options).find(o => o.value === '' || norm(o.text) === '');
+                        if (bosOpt && el.value !== bosOpt.value) {
+                            el.value = bosOpt.value;
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+                            temizlenen++;
+                        }
+                        return;
+                    }
 
                     let aranan = norm(dersAdi);
                     // Özel durumlar: Seçmeli dersler ve Rehberlik ve Din Kültürü
@@ -255,7 +267,7 @@ function enYakinSecenegiBul(hedefNorm, adaylar, metinFn) {
                 });
             });
 
-            if (callback) callback({sayac, bulunamayanlar});
+            if (callback) callback({sayac, bulunamayanlar, temizlenen});
         });
     }
 
