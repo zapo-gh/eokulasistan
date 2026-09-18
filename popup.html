@@ -93,29 +93,45 @@
     .upload-text { font-size: 11px; color: #718096; text-align: left; line-height: 1.3; }
     .upload-text strong { color: #4a5568; display: block; margin-top: 1px; font-size: 9.5px; font-weight: 400; }
 
-    /* ── Status badge ── */
-    .status-row {
+    .upload-row {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 8px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      background: #141824;
-      margin-top: 10px;
-      min-height: 34px;
     }
-    .status-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
+    .upload-row .upload-zone { flex: 1; min-width: 0; }
+    .upload-row .btn-analyze {
+      width: auto;
+      margin: 0;
       flex-shrink: 0;
+      white-space: nowrap;
     }
-    .status-dot.gray  { background: #4a5568; }
-    .status-dot.blue  { background: #4299e1; animation: pulse 1.2s infinite; }
-    .status-dot.green { background: #48bb78; }
-    .status-dot.red   { background: #fc8181; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-    .status-text { font-size: 11px; color: #a0aec0; flex: 1; line-height: 1.4; }
+    /* ── Status badge ── */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      transform: translate(-50%, 8px);
+      background: #141824;
+      border: 1px solid #2d3748;
+      border-left: 3px solid #4a5568;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #e2e8f0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      max-width: calc(100% - 28px);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      z-index: 1000;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.gray  { border-left-color: #4a5568; }
+    .toast.blue  { border-left-color: #4299e1; }
+    .toast.green { border-left-color: #48bb78; }
+    .toast.red   { border-left-color: #fc8181; }
 
     /* ── Şube bilgisi ── */
     .sube-info {
@@ -309,22 +325,19 @@
       <span>📄 PDF Analizi</span>
       <span class="section-hint">1. adım</span>
     </div>
-    <div class="upload-zone" id="uploadZone" title="e-Okul'dan indirdiğiniz sınıf programı PDF'ini seçin">
-      <input type="file" id="pdfDosya" accept=".pdf" />
-      <div class="upload-icon" id="uploadIcon">📑</div>
-      <div class="upload-text">
-        SinifProgrami.pdf seçin
-        <strong>Sürükleyin veya tıklayın</strong>
+    <div class="upload-row">
+      <div class="upload-zone" id="uploadZone" title="e-Okul'dan indirdiğiniz sınıf programı PDF'ini seçin">
+        <input type="file" id="pdfDosya" accept=".pdf" />
+        <div class="upload-icon" id="uploadIcon">📑</div>
+        <div class="upload-text">
+          SinifProgrami.pdf seçin
+          <strong>Sürükleyin veya tıklayın</strong>
+        </div>
       </div>
-    </div>
 
-    <button class="btn btn-analyze" id="btnAnaliz" disabled title="Seçilen PDF'i tarayıp ders/öğretmen/program verisini çıkarır">
-      🔍 PDF'i Analiz Et
-    </button>
-
-    <div class="status-row">
-      <div class="status-dot gray" id="statusDot"></div>
-      <div class="status-text" id="statusText">PDF seçilmedi</div>
+      <button class="btn btn-analyze" id="btnAnaliz" disabled title="Seçilen PDF'i tarayıp ders/öğretmen/program verisini çıkarır">
+        🔍 Analiz Et
+      </button>
     </div>
   </div>
 
@@ -349,7 +362,7 @@
         Hangi program uygulansın?
       </label>
       <select id="subeManuelSecici" class="sube-select">
-        <option value="">(Otomatik Algıla)</option>
+        <option value="">Otomatik Seçim</option>
       </select>
     </div>
 
@@ -377,6 +390,8 @@
       🛑 Döngüyü Durdur / Sıfırla
     </button>
   </div>
+
+  <div id="toast" class="toast"></div>
 
   <script type="module" src="popup.js"></script>
 </body>

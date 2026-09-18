@@ -5,8 +5,7 @@ const ui = {
   uploadZone:       document.getElementById('uploadZone'),
   uploadIcon:       document.getElementById('uploadIcon'),
   btnAnaliz:        document.getElementById('btnAnaliz'),
-  statusDot:        document.getElementById('statusDot'),
-  statusText:       document.getElementById('statusText'),
+  toast:            document.getElementById('toast'),
   subeSection:      document.getElementById('subeSection'),
   subeListesi:      document.getElementById('subeListesi'),
   subeAktif:        document.getElementById('subeAktif'),
@@ -22,10 +21,13 @@ const ui = {
 
 let secilenDosya = null;
 
-// ── Durum göstergesi ──────────────────────────────────────
+// ── Durum bildirimi (küçük, kendiliğinden kaybolan toast) ──
+let toastTimer = null;
 function setStatus(renk, metin) {
-  ui.statusDot.className = `status-dot ${renk}`;
-  ui.statusText.textContent = metin;
+  ui.toast.textContent = metin;
+  ui.toast.className = `toast show ${renk}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 2600);
 }
 
 // ── PDF seçilince ─────────────────────────────────────────
@@ -74,7 +76,7 @@ ui.btnAnaliz.addEventListener('click', async () => {
 // ── Şube Listesini Göster ─────────────────────────────────
 function gosterSubeListesi(ozet) {
   ui.subeListesi.innerHTML = '';
-  ui.subeManuelSecici.innerHTML = '<option value="">-- Şube Seçin --</option>';
+  ui.subeManuelSecici.innerHTML = '<option value="">Otomatik Seçim</option>';
 
   ozet.forEach(o => {
     // Manuel seçici için dropdown'ı doldur
