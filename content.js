@@ -5,6 +5,23 @@
 
 const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğıöşü]/g, '');
 
+// Birden çok aday ("...includes..." ile eşleşen) arasından, normalize edilmiş
+// metin uzunluğu hedefe en yakın olanı seçer. Basit "ilk eşleşme" yaklaşımı
+// dropdown sırasına göre yanlış (alakasız ama içeren) seçeneği kazanabiliyordu.
+function enYakinSecenegiBul(hedefNorm, adaylar, metinFn) {
+    let en = null, enFark = Infinity;
+    for (const aday of adaylar) {
+        const adayNorm = metinFn(aday);
+        if (adayNorm.length <= 3) continue;
+        if (adayNorm === hedefNorm) return aday; // tam eşleşme varsa hemen döndür
+        if (adayNorm.includes(hedefNorm) || hedefNorm.includes(adayNorm)) {
+            const fark = Math.abs(adayNorm.length - hedefNorm.length);
+            if (fark < enFark) { en = aday; enFark = fark; }
+        }
+    }
+    return en;
+}
+
     // 3) AKTİF ŞUBE TESPİTİ
     // ============================================================
 
@@ -43,282 +60,8 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
     }
 
     // ============================================================
-    // 4) EŞLEŞTİRME DOĞRULAMA MOTORU
+    // 4) ÖĞRETMEN ATAMA MOTORU
     // ============================================================
-
-    /**
-     * e-Okul'daki ders ve öğretmen dropdown'larını okuyup
-     * PDF verisindeki her atama için eşleşme skoru hesaplar.
-     * Sonuç: [{pdfDers, pdfOgr, dersEsleme, ogrEsleme, durum}, ...]
-     * durum: 'iyi' (≥85), 'belirsiz' (50–84), 'hata' (<50)
-     */
-    function eslesmePlaniHazirla(sube, pdfVeri) {
-        const ddlDers = document.getElementById('ddlDersler');
-        const ddlOgr  = document.getElementById('ddlOgretmen');
-
-        if (!ddlDers || !ddlOgr) return null;
-
-        const dersSecenekler = Array.from(ddlDers.options);
-        const ogrSecenekler  = Array.from(ddlOgr.options);
-        const liste = pdfVeri.dersOgretmen[sube] || [];
-        const plan = [];
-
-        for (const atama of liste) {
-            const dersEsleme = enIyiEslesmeyiBul(atama.ders, dersSecenekler);
-            const ogrEsleme  = enIyiEslesmeyiBul(atama.ogr,  ogrSecenekler);
-
-            const dSkor = dersEsleme?.skor || 0;
-            const oSkor = ogrEsleme?.skor  || 0;
-            const minSkor = Math.min(dSkor, oSkor);
-
-            plan.push({
-                pdfDers:    atama.ders,
-                pdfOgr:     atama.ogr,
-                dersEsleme: dersEsleme || { value: '', text: '—', skor: 0 },
-                ogrEsleme:  ogrEsleme  || { value: '', text: '—', skor: 0 },
-                durum: minSkor >= 85 ? 'iyi' : minSkor >= 50 ? 'belirsiz' : 'hata',
-                // Tam option listeleri (modal'da seçim için)
-                dersSecenekler: dersSecenekler.map(o => ({ value: o.value, text: o.text })),
-                ogrSecenekler:  ogrSecenekler.map(o => ({ value: o.value, text: o.text })),
-            });
-        }
-        return plan;
-    }
-
-    /**
-     * Doğrulama modalını sayfaya enjekte eder.
-     * Kullanıcı onaylayınca onaylanmış harita storage'a kaydedilir.
-     */
-    function dogrulamaModaliniGoster(sube, plan) {
-        // Varsa eski modalı kaldır
-        const eskiModal = document.getElementById('eokul-asistan-modal');
-        if (eskiModal) eskiModal.remove();
-
-        const iyi      = plan.filter(p => p.durum === 'iyi').length;
-        const belirsiz = plan.filter(p => p.durum === 'belirsiz').length;
-        const hata     = plan.filter(p => p.durum === 'hata').length;
-
-        const satırlar = plan.map((p, i) => {
-            const renk = p.durum === 'iyi' ? '#276749' : p.durum === 'belirsiz' ? '#744210' : '#742a2a';
-            const ikon = p.durum === 'iyi' ? '✅' : p.durum === 'belirsiz' ? '⚠️' : '❌';
-
-            const dersOpts = p.dersSecenekler.map(o =>
-                `<option value="${o.value}" ${o.value === p.dersEsleme.value ? 'selected' : ''}>${o.text}</option>`
-            ).join('');
-            const ogrOpts = p.ogrSecenekler.map(o =>
-                `<option value="${o.value}" ${o.value === p.ogrEsleme.value ? 'selected' : ''}>${o.text}</option>`
-            ).join('');
-
-            return `
-            <tr style="border-bottom:1px solid #1e2535;background:${renk}22">
-              <td style="padding:6px 8px;font-size:11px;color:#a0aec0;white-space:nowrap">
-                ${ikon} <span style="color:#e2e8f0;font-weight:600">${p.pdfDers}</span><br>
-                <span style="font-size:10px;color:#718096">${p.pdfOgr}</span>
-              </td>
-              <td style="padding:6px 8px">
-                <select data-idx="${i}" data-tip="ders"
-                  style="width:100%;background:#141824;border:1px solid #2d3748;color:#e2e8f0;border-radius:5px;padding:3px 5px;font-size:10px">
-                  ${dersOpts}
-                </select>
-                <div style="font-size:9px;color:${p.dersEsleme.skor>=85?'#68d391':p.dersEsleme.skor>=50?'#f6ad55':'#fc8181'};margin-top:2px">Uyum: ${p.dersEsleme.skor}%</div>
-              </td>
-              <td style="padding:6px 8px">
-                <select data-idx="${i}" data-tip="ogr"
-                  style="width:100%;background:#141824;border:1px solid #2d3748;color:#e2e8f0;border-radius:5px;padding:3px 5px;font-size:10px">
-                  ${ogrOpts}
-                </select>
-                <div style="font-size:9px;color:${p.ogrEsleme.skor>=85?'#68d391':p.ogrEsleme.skor>=50?'#f6ad55':'#fc8181'};margin-top:2px">Uyum: ${p.ogrEsleme.skor}%</div>
-              </td>
-            </tr>`;
-        }).join('');
-
-        const html = `
-        <div id="eokul-asistan-modal" style="
-          position:fixed;inset:0;z-index:999999;
-          background:rgba(0,0,0,0.85);
-          display:flex;align-items:flex-start;justify-content:center;
-          padding:20px;overflow-y:auto;
-          font-family:'Segoe UI',sans-serif;
-        ">
-          <div style="
-            background:#0f1117;border:1px solid #2d3748;
-            border-radius:14px;width:100%;max-width:900px;
-            box-shadow:0 25px 60px rgba(0,0,0,0.8);
-          ">
-            <!-- Başlık -->
-            <div style="padding:18px 22px;border-bottom:1px solid #1e2535;display:flex;align-items:center;justify-content:space-between">
-              <div>
-                <div style="font-size:16px;font-weight:700;color:#63b3ed">🔗 Eşleştirme Doğrulama — ${sube}</div>
-                <div style="font-size:11px;color:#718096;margin-top:4px">
-                  PDF verisi ↔ e-Okul dropdown eşleştirmesi. Kırmızı/sarı satırları kontrol edin.
-                </div>
-              </div>
-              <button onclick="document.getElementById('eokul-asistan-modal').remove()" style="
-                background:#742a2a;border:none;color:#feb2b2;border-radius:7px;
-                padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600"
-              >✕ Kapat</button>
-            </div>
-
-            <!-- Özet -->
-            <div style="padding:12px 22px;display:flex;gap:12px;border-bottom:1px solid #1e2535">
-              <span style="background:#276749;color:#9ae6b4;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600">✅ Otomatik: ${iyi}</span>
-              <span style="background:#744210;color:#fbd38d;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600">⚠️ Belirsiz: ${belirsiz}</span>
-              <span style="background:#742a2a;color:#feb2b2;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600">❌ Eşleşmedi: ${hata}</span>
-              <span style="color:#718096;font-size:11px;margin-left:auto">Toplam: ${plan.length} atama</span>
-            </div>
-
-            <!-- Tablo -->
-            <div style="padding:16px 22px;max-height:60vh;overflow-y:auto">
-              <table style="width:100%;border-collapse:collapse">
-                <thead>
-                  <tr style="border-bottom:1px solid #2d3748">
-                    <th style="text-align:left;padding:6px 8px;font-size:10px;color:#4a5568;text-transform:uppercase;letter-spacing:1px;width:30%">PDF Verisi</th>
-                    <th style="text-align:left;padding:6px 8px;font-size:10px;color:#4a5568;text-transform:uppercase;letter-spacing:1px;width:35%">e-Okul Dersi</th>
-                    <th style="text-align:left;padding:6px 8px;font-size:10px;color:#4a5568;text-transform:uppercase;letter-spacing:1px;width:35%">e-Okul Öğretmeni</th>
-                  </tr>
-                </thead>
-                <tbody id="eokul-esleme-tbody">${satırlar}</tbody>
-              </table>
-            </div>
-
-            <!-- Alt butonlar -->
-            <div style="padding:16px 22px;border-top:1px solid #1e2535;display:flex;gap:10px;justify-content:flex-end">
-              <button onclick="document.getElementById('eokul-asistan-modal').remove()" style="
-                background:#1e2535;border:1px solid #2d3748;color:#a0aec0;
-                padding:10px 20px;border-radius:8px;cursor:pointer;font-size:12px"
-              >İptal</button>
-              <button id="eokul-onayla-btn" style="
-                background:linear-gradient(135deg,#276749,#22543d);
-                border:1px solid #2f855a;color:#9ae6b4;
-                padding:10px 24px;border-radius:8px;cursor:pointer;
-                font-size:13px;font-weight:700"
-              >✅ Onayla &amp; Öğretmenleri Ata</button>
-            </div>
-          </div>
-        </div>`;
-
-        document.body.insertAdjacentHTML('beforeend', html);
-
-        // Onayla butonu
-        document.getElementById('eokul-onayla-btn').addEventListener('click', () => {
-            // Güncel seçimleri topla
-            const tbody = document.getElementById('eokul-esleme-tbody');
-            const dersSelectler = tbody.querySelectorAll('select[data-tip="ders"]');
-            const ogrSelectler  = tbody.querySelectorAll('select[data-tip="ogr"]');
-
-            const onayliHarita = plan.map((p, i) => ({
-                pdfDers: p.pdfDers,
-                pdfOgr:  p.pdfOgr,
-                dersValue: dersSelectler[i].value,
-                dersText:  dersSelectler[i].options[dersSelectler[i].selectedIndex]?.text || '',
-                ogrValue:  ogrSelectler[i].value,
-                ogrText:   ogrSelectler[i].options[ogrSelectler[i].selectedIndex]?.text || '',
-            })).filter(p => p.dersValue && p.ogrValue); // boş seçenekleri çıkar
-
-            if (onayliHarita.length === 0) {
-                alert('Hiçbir geçerli eşleştirme yok. Lütfen kontrol edin.'); return;
-            }
-
-            // Modalı kapat ve atamayı başlat
-            document.getElementById('eokul-asistan-modal').remove();
-
-            chrome.storage.local.set({
-                eokul_onay_harita: { [sube]: onayliHarita },
-                eokul_bot_durum: { aktif: true, islem: 'OGRETMEN_ATA_ONAYLANMIS', sube, index: 0 }
-            }, () => siradakiDersiAtaOnaylanmis());
-        });
-    }
-
-    // ============================================================
-    // 5) ÖĞRETMEN ATAMA MOTORU (ONAYLANMIŞ HARİTA)
-    // ============================================================
-
-    function siradakiDersiAtaOnaylanmis() {
-        chrome.storage.local.get(['eokul_bot_durum', 'eokul_onay_harita'], function (res) {
-            if (!res.eokul_bot_durum || res.eokul_bot_durum.islem !== 'OGRETMEN_ATA_ONAYLANMIS') return;
-            const state = res.eokul_bot_durum;
-            const harita = res.eokul_onay_harita;
-            const liste = harita?.[state.sube];
-
-            if (!liste || state.index >= liste.length) {
-                alert(`🎉 ${state.sube} şubesinin tüm (${liste?.length || 0}) öğretmen atamaları tamamlandı!`);
-                chrome.storage.local.remove('eokul_bot_durum');
-                return;
-            }
-
-            const ddlDers = document.getElementById('ddlDersler');
-            const ddlOgr  = document.getElementById('ddlOgretmen');
-
-            if (!ddlDers || !ddlOgr) { setTimeout(siradakiDersiAtaOnaylanmis, 800); return; }
-            if (ddlDers.disabled || ddlOgr.disabled) { eOkulYeniKayitTetikle(); return; }
-
-            const hedef = liste[state.index];
-
-            // Onaylı value'ları direk kullan — dropdown aramasına gerek yok
-            let dersBulundu = false, ogrBulundu = false;
-
-            for (let opt of ddlDers.options) {
-                if (opt.value === hedef.dersValue) {
-                    opt.selected = true; ddlDers.selectedIndex = opt.index; ddlDers.value = opt.value;
-                    ddlDers.dispatchEvent(new Event('change', { bubbles: true }));
-                    dersBulundu = true; break;
-                }
-            }
-            // value tam eşleşmezse fuzzy fallback
-            if (!dersBulundu) {
-                const hDers = norm(hedef.dersText || hedef.pdfDers);
-                for (let opt of ddlDers.options) {
-                    const oDers = norm(opt.text);
-                    if (oDers.length > 3 && (oDers.includes(hDers) || hDers.includes(oDers))) {
-                        opt.selected = true; ddlDers.selectedIndex = opt.index; ddlDers.value = opt.value;
-                        ddlDers.dispatchEvent(new Event('change', { bubbles: true }));
-                        dersBulundu = true; break;
-                    }
-                }
-            }
-
-            for (let opt of ddlOgr.options) {
-                if (opt.value === hedef.ogrValue) {
-                    opt.selected = true; ddlOgr.selectedIndex = opt.index; ddlOgr.value = opt.value;
-                    ddlOgr.dispatchEvent(new Event('change', { bubbles: true }));
-                    ogrBulundu = true; break;
-                }
-            }
-            if (!ogrBulundu) {
-                const hOgr = norm(hedef.ogrText || hedef.pdfOgr);
-                for (let opt of ddlOgr.options) {
-                    const oOgr = norm(opt.text);
-                    if (oOgr.length > 3 && (oOgr.includes(hOgr) || hOgr.includes(oOgr))) {
-                        opt.selected = true; ddlOgr.selectedIndex = opt.index; ddlOgr.value = opt.value;
-                        ddlOgr.dispatchEvent(new Event('change', { bubbles: true }));
-                        ogrBulundu = true; break;
-                    }
-                }
-            }
-
-            if (!dersBulundu || !ogrBulundu) {
-                const skip = confirm(
-                    `⚠️ Onaylı eşleşme artık geçersiz (${state.index + 1}/${liste.length}):\n` +
-                    `Ders: ${hedef.pdfDers}\nÖğretmen: ${hedef.pdfOgr}\n\nAtlayıp devam?`
-                );
-                if (skip) {
-                    state.index++;
-                    chrome.storage.local.set({ eokul_bot_durum: state }, () => {
-                        window.location.reload();
-                    });
-                } else {
-                    chrome.storage.local.remove('eokul_bot_durum');
-                }
-                return;
-            }
-
-            state.index++;
-            chrome.storage.local.set({ eokul_bot_durum: state }, () => {
-                setTimeout(eOkulKaydetTetikle, Math.floor(Math.random() * 400) + 1200);
-            });
-        });
-    }
-
 
     function siradakiDersiAta() {
         chrome.storage.local.get(['eokul_bot_durum', 'eokul_pdf_veri'], function (res) {
@@ -378,13 +121,11 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
             }
             // DERS İÇİN KISMİ EŞLEŞME
             if (!dersBulundu) {
-                for (let opt of ddlDers.options) {
-                    const oDers = norm(opt.text);
-                    if (oDers.length > 3 && (oDers.includes(hDers) || hDers.includes(oDers))) {
-                        opt.selected = true; ddlDers.selectedIndex = opt.index; ddlDers.value = opt.value;
-                        ddlDers.dispatchEvent(new Event('change', { bubbles: true }));
-                        dersBulundu = true; break;
-                    }
+                const opt = enYakinSecenegiBul(hDers, Array.from(ddlDers.options), o => norm(o.text));
+                if (opt) {
+                    opt.selected = true; ddlDers.selectedIndex = opt.index; ddlDers.value = opt.value;
+                    ddlDers.dispatchEvent(new Event('change', { bubbles: true }));
+                    dersBulundu = true;
                 }
             }
 
@@ -400,13 +141,11 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
             }
             // ÖĞRETMEN İÇİN KISMİ EŞLEŞME
             if (!ogrBulundu) {
-                for (let opt of ddlOgr.options) {
-                    const oOgr = norm(opt.text);
-                    if (oOgr.length > 3 && (oOgr.includes(hOgr) || hOgr.includes(oOgr))) {
-                        opt.selected = true; ddlOgr.selectedIndex = opt.index; ddlOgr.value = opt.value;
-                        ddlOgr.dispatchEvent(new Event('change', { bubbles: true }));
-                        ogrBulundu = true; break;
-                    }
+                const opt = enYakinSecenegiBul(hOgr, Array.from(ddlOgr.options), o => norm(o.text));
+                if (opt) {
+                    opt.selected = true; ddlOgr.selectedIndex = opt.index; ddlOgr.value = opt.value;
+                    ddlOgr.dispatchEvent(new Event('change', { bubbles: true }));
+                    ogrBulundu = true;
                 }
             }
 
@@ -492,16 +231,12 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
 
                     // 2. AŞAMA: EĞER TAM EŞLEŞME YOKSA KISMİ EŞLEŞME ARA (Örn: "MATEMATİK")
                     if (!bulundu) {
-                        for (let opt of el.options) {
-                            const optNorm = norm(opt.text);
-                            // Sadece yeterince uzun metinlerde kısmi eşleşme yap
-                            if (optNorm.length > 3 && (optNorm.includes(aranan) || aranan.includes(optNorm))) {
-                                el.value = opt.value;
-                                el.dispatchEvent(new Event('change', { bubbles: true }));
-                                sayac++;
-                                bulundu = true;
-                                break;
-                            }
+                        const opt = enYakinSecenegiBul(aranan, Array.from(el.options), o => norm(o.text));
+                        if (opt) {
+                            el.value = opt.value;
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+                            sayac++;
+                            bulundu = true;
                         }
                     }
 
@@ -617,27 +352,6 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
             return true;
         }
 
-        // ── Eşleştirme Doğrulama ───────────────────────────────────
-        if (req.islem === 'DOGRULA_ESLESME') {
-            const sube = req.seciliSube || aktifSubeyiBul();
-            if (!sube) {
-                alert('Lütfen e-Okul sayfasından bir şube seçin veya eklenti menüsünden uygulayacağınız şubeyi manuel seçin.');
-                return;
-            }
-            chrome.storage.local.get(['eokul_pdf_veri'], (res) => {
-                if (!res.eokul_pdf_veri || !res.eokul_pdf_veri.dersOgretmen?.[sube]) {
-                    alert(`"${sube}" şubesi için PDF verisi yok.\nÖnce popup'tan PDF analiz edin.`);
-                    return;
-                }
-                const plan = eslesmePlaniHazirla(sube, res.eokul_pdf_veri);
-                if (!plan) {
-                    alert('Ders/Öğretmen dropdown’ları bulunamadı.\nListe sayfasında olduğunuzdan emin olun.');
-                    return;
-                }
-                dogrulamaModaliniGoster(sube, plan);
-            });
-        }
-
         // ── Öğretmen Atama ────────────────────────────────────────
         if (req.islem === 'OGRETMEN_ATA') {
             const sube = req.seciliSube || aktifSubeyiBul();
@@ -723,8 +437,6 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
             const islem = res.eokul_bot_durum.islem;
             if (islem === 'OGRETMEN_ATA') {
                 setTimeout(siradakiDersiAta, 600);
-            } else if (islem === 'OGRETMEN_ATA_ONAYLANMIS') {
-                setTimeout(siradakiDersiAtaOnaylanmis, 600);
             }
         });
     });

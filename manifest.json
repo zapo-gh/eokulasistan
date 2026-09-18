@@ -5,8 +5,7 @@
   "description": "PDF'den otomatik olarak ders/öğretmen atamasını ve haftalık programı e-Okul'a yükler.",
   "permissions": [
     "storage",
-    "activeTab",
-    "scripting"
+    "activeTab"
   ],
   "icons": {
     "16": "logo.png",
@@ -23,12 +22,6 @@
       "js": ["content.js"],
       "all_frames": true,
       "run_at": "document_end"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["libs/pdf.min.mjs", "libs/pdf.worker.min.mjs"],
-      "matches": ["<all_urls>"]
     }
   ]
 }
