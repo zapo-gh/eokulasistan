@@ -22,8 +22,6 @@ const ui = {
   subeManuelSecici: document.getElementById('subeManuelSecici')
 };
 
-let secilenDosya = null;
-
 // ── Durum göstergesi ──────────────────────────────────────
 function setStatus(renk, metin) {
   ui.statusDot.className = `status-dot ${renk}`;
@@ -34,7 +32,7 @@ function setStatus(renk, metin) {
 ui.pdfDosya.addEventListener('change', (e) => {
   const f = e.target.files[0];
   if (!f) return;
-  secilenDosya = f;
+  
   ui.uploadZone.classList.add('has-file');
   ui.uploadIcon.textContent = '✅';
   document.querySelector('.upload-text').innerHTML =
@@ -59,27 +57,12 @@ ui.btnAnaliz.addEventListener('click', async () => {
     const arrayBuffer = await secilenDosya.arrayBuffer();
     const pdfData = Array.from(new Uint8Array(arrayBuffer));
     
-    setStatus('blue', 'Adım 2: PDF kütüphanesi yükleniyor...');
-    const pdfjsLib = await import('./libs/pdf.min.mjs');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('libs/pdf.worker.min.mjs');
-
-    setStatus('blue', 'Adım 3: Belge parse ediliyor...');
-    const doc = await pdfjsLib.getDocument({ 
-        data: new Uint8Array(pdfData),
-        disableWorker: true,
-        isEvalSupported: false 
-    }).promise;
+    setStatus('blue', 'Adım 2: Belge okunuyor...');
+    const sayfalar = await pdfdenSayfaCikar(pdfData, (i, total) => {
+        setStatus('blue', `Adım 3: Sayfa ${i}/${total} çıkarılıyor...`);
+    });
     
-    const sayfalar = [];
-    for (let i = 1; i <= doc.numPages; i++) {
-        setStatus('blue', `Adım 4: Sayfa ${i}/${doc.numPages} çıkarılıyor...`);
-        const page = await doc.getPage(i);
-        const content = await page.getTextContent();
-        const satirlar = itemleriSatirlara(content.items);
-        sayfalar.push({ satirlar });
-    }
-    
-    setStatus('blue', 'Adım 5: Haftalık program oluşturuluyor...');
+    setStatus('blue', 'Adım 4: Haftalık program oluşturuluyor...');
     const veri = pdfVeriOlusturKoord(sayfalar);
     
     if (Object.keys(veri.dersOgretmen).length === 0) {
@@ -212,25 +195,11 @@ ui.btnSifirla.addEventListener('click', () => {
   });
 });
 
-// ── Debug koordinat göster ────────────────────────────────
-const btnDbg = document.getElementById('btnDebugGoster');
-const debugAlani = document.getElementById('debugAlani');
-const debugMetin = document.getElementById('debugMetin');
-if (btnDbg) {
-  btnDbg.addEventListener('click', () => {
-    chrome.storage.local.get(['_haftalik_debug'], (res) => {
-      debugAlani.style.display = debugAlani.style.display === 'none' ? 'block' : 'none';
-      debugMetin.value = res._haftalik_debug || '(Henüz veri yok — önce PDF analiz edin)';
-    });
-  });
-}
 
 // ── Sayfa yüklenince önceki veriyi kontrol et ─────────────
 guncellAktifSube();
 
 
-
-const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğıöşü]/g, '');
 
 // 2) PDF PARSE MOTORU — Koordinat Tabanlı, Format-Agnostik
     // ============================================================
@@ -597,13 +566,7 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
                     gunItems.push({ gun: item.str.trim(), y: satir.y });
             }
         }
-        const _dbg = [`tabloBasY=${tabloBasY.toFixed(1)}`];
-        _dbg.push('gunItems: ' + gunItems.map(g => `${g.gun}:${g.y.toFixed(1)}`).join(', '));
-        _dbg.push('saatGruplari: ' + saatYGruplari.map(g => `y=${g.grupY.toFixed(1)}(${g.saatler.length})`).join(', '));
-        programSatirlari.slice(0,50).forEach(s => {
-            _dbg.push(`y=${s.y.toFixed(1)}: ` + s.items.slice(0,4).map(i => `[x${i.x.toFixed(0)}]${i.str}`).join(' '));
-        });
-        chrome.storage.local.set({ _haftalik_debug: _dbg.join('\n') });
+
         const haftalik = {};
         const gunKeys = GUNLER.map(g => g.key);
         for (let gi = 0; gi < saatYGruplari.length; gi++) {
@@ -677,10 +640,9 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
      * pdfjs ile PDF sayfalarını yükler ve her sayfa için yapısal veri döndürür.
      * Metin düz string yerine satır+item yapısı (koordinatlar dahil) olarak döner.
      */
-    async function pdfdenSayfaCikar(pdfBytes) {
+    async function pdfdenSayfaCikar(pdfBytes, onProgress) {
         const pdfjsLib = await import('./libs/pdf.min.mjs');
-        // Worker'ı tamamen iptal et (popup içinde MV3 worker sorunları olmaması için)
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('libs/pdf.worker.min.mjs');
 
         const doc = await pdfjsLib.getDocument({ 
             data: new Uint8Array(pdfBytes),
@@ -689,6 +651,7 @@ const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğı
         }).promise;
         const sayfalar = [];
         for (let i = 1; i <= doc.numPages; i++) {
+            if (onProgress) onProgress(i, doc.numPages);
             const page = await doc.getPage(i);
             const content = await page.getTextContent();
             const satirlar = itemleriSatirlara(content.items);

@@ -5,28 +5,11 @@
     // 1) YARDIMCI FONKSİYONLAR
     // ============================================================
 
-    const norm = (s) => (s || '').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğıöşü]/g, '');
 
     const escHtml = (s) => (s || '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    function benzerlikSkoru(a, b) {
-        const na = norm(a), nb = norm(b);
-        if (!na || !nb) return 0;
-        if (na === nb) return 100;
-        if (na.includes(nb) || nb.includes(na)) {
-            const oran = Math.min(na.length, nb.length) / Math.max(na.length, nb.length);
-            return Math.round(60 + oran * 35);
-        }
-        let eslesme = 0;
-        const bHarfler = nb.split('');
-        const aKopyasi = na.split('');
-        for (const h of bHarfler) {
-            const idx = aKopyasi.indexOf(h);
-            if (idx !== -1) { eslesme++; aKopyasi.splice(idx, 1); }
-        }
-        return Math.round((eslesme / Math.max(na.length, nb.length)) * 55);
-    }
+
 
     function enIyiEslesmeyiBul(aranan, secenekler, minSkor = 30) {
         let enIyi = null, enYuksekSkor = 0;
