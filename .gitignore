@@ -1,0 +1,10 @@
+# İşletim sistemi dosyaları
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Çıktı / Test amaçlı oluşturulan PDF dosyaları
+*.pdf
+
+# Loglar
+*.log

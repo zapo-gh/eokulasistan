@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "e-Okul Ders Programı Yardımcısı",
+  "version": "2.0",
+  "description": "PDF'den otomatik olarak ders/öğretmen atamasını ve haftalık programı e-Okul'a yükler.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "icons": {
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "logo.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://e-okul.meb.gov.tr/*"],
+      "js": ["content.js"],
+      "all_frames": true,
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["libs/pdf.min.mjs", "libs/pdf.worker.min.mjs"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
