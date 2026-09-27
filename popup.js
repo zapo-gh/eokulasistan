@@ -423,14 +423,21 @@ guncellAktifSube();
             alert('⚠️ DİKKAT: Yüklenen PDF dosyasındaki tablo sütunları beklenen standart Yabil formatından farklı yerlerde (farklı bir şablon olabilir).\n\nİşlem devam edecek ancak verilerde kaymalar yaşanmış olabilir. Lütfen hata yapmamak için "Eşleştirmeyi Doğrula" butonuna basarak atamaları manuel olarak iki kez kontrol edin!');
         }
 
-        // 2. Sabit veri sütunu X koordinatları (analiz ile ölçülmüş, her iki PDF'te sabit)
-        //    Başlık metninin X'i ≠ veri X'i (başlıklar merkez hizalı olabilir)
-        //    Gerçek veri X'leri: Sr≈46 | Kod≈57 | Ad≈107 | Alan≈257 | Süre≈308 | Ogr≈322 | Yer≈472
+        // 2. Sabit veri sütunu X koordinatları ve Şablon Varyantı (Meslek Lisesi vs Genel Lise)
+        let alanSutunuVar = false;
+        for (const item of tabloBaslikSatiri.items) {
+            const metin = norm(item.str);
+            if (metin.includes('alan') || metin.includes('dal')) {
+                alanSutunuVar = true;
+                break;
+            }
+        }
+
         const sutunlar = {
             srX:   46,   // Sıra numarası
             kodX:  57,   // Ders kodu
             adX:   107,  // Ders adı (uzun metin)
-            alanX: 257,  // Alan/Dal (opsiyonel, sadece sinif2.pdf'te)
+            alanX: alanSutunuVar ? 257 : null,  // Alan/Dal (opsiyonel, sadece şablonda varsa aktif)
             sureX: 308,  // Süre (rakam)
             ogrX:  322,  // Öğretmen adı
             yerX:  472   // Sınıf/yer (opsiyonel)
