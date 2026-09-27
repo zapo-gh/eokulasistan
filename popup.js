@@ -407,6 +407,22 @@ guncellAktifSube();
         }
         if (!tabloBaslikSatiri) return [];
 
+        // --- SAĞLIK KONTROLÜ (Sanity Check) ---
+        // Yabil rapor motorundan çıkan standart formata uyup uymadığını doğrula.
+        // Eğer sütunlar beklenen X koordinatlarından farklıysa (örn. yeni bir şablon), sessizce
+        // hatalı veri üretmek yerine kullanıcıyı uyarır.
+        let sablonUygunMu = true;
+        for (const item of tabloBaslikSatiri.items) {
+            const metin = item.str.trim();
+            if (metin === 'Sr' && Math.abs(item.x - 44) > 12) sablonUygunMu = false;
+            if (metin.includes('Kodu') && Math.abs(item.x - 64) > 15) sablonUygunMu = false;
+            if (metin === 'Öğretmen' && Math.abs(item.x - 380) > 15) sablonUygunMu = false;
+        }
+
+        if (!sablonUygunMu) {
+            alert('⚠️ DİKKAT: Yüklenen PDF dosyasındaki tablo sütunları beklenen standart Yabil formatından farklı yerlerde (farklı bir şablon olabilir).\n\nİşlem devam edecek ancak verilerde kaymalar yaşanmış olabilir. Lütfen hata yapmamak için "Eşleştirmeyi Doğrula" butonuna basarak atamaları manuel olarak iki kez kontrol edin!');
+        }
+
         // 2. Sabit veri sütunu X koordinatları (analiz ile ölçülmüş, her iki PDF'te sabit)
         //    Başlık metninin X'i ≠ veri X'i (başlıklar merkez hizalı olabilir)
         //    Gerçek veri X'leri: Sr≈46 | Kod≈57 | Ad≈107 | Alan≈257 | Süre≈308 | Ogr≈322 | Yer≈472
