@@ -37,19 +37,30 @@
                 }
             }
         }
+        
+        let enIyiOpt = null;
+        let enYuksekSkor = 0;
+
         for (const opt of ddl.options) {
+            if (!opt.value) continue;
+            
             if (norm(opt.text) === hedefNorm) {
                 opt.selected = true; ddl.selectedIndex = opt.index; ddl.value = opt.value;
                 ddl.dispatchEvent(new Event('change', { bubbles: true })); return true;
             }
-        }
-        for (const opt of ddl.options) {
-            const oNorm = norm(opt.text);
-            if (oNorm.length > 3 && (oNorm.includes(hedefNorm) || hedefNorm.includes(oNorm))) {
-                opt.selected = true; ddl.selectedIndex = opt.index; ddl.value = opt.value;
-                ddl.dispatchEvent(new Event('change', { bubbles: true })); return true;
+            
+            const skor = benzerlikSkoru(hedefNorm, opt.text);
+            if (skor > enYuksekSkor) {
+                enYuksekSkor = skor;
+                enIyiOpt = opt;
             }
         }
+
+        if (enIyiOpt && enYuksekSkor >= 40) {
+            enIyiOpt.selected = true; ddl.selectedIndex = enIyiOpt.index; ddl.value = enIyiOpt.value;
+            ddl.dispatchEvent(new Event('change', { bubbles: true })); return true;
+        }
+
         return false;
     }
 
@@ -434,18 +445,7 @@
                         if (secilen) break;
                     }
 
-                    // 2. Substring eşleşme
-                    if (!secilen) {
-                        for (const aranan of arananlar) {
-                            for (const opt of opts) {
-                                const oN = norm(opt.text);
-                                if (oN.length > 3 && (oN.includes(aranan) || aranan.includes(oN))) { secilen = opt; break; }
-                            }
-                            if (secilen) break;
-                        }
-                    }
-
-                    // 3. Fuzzy similarity (benzerlikSkoru — her alternatifte dene)
+                    // 2. En İyi Eşleşmeyi Bul (Substring veya Fuzzy)
                     if (!secilen) {
                         let enYuksek = 0;
                         for (const aranan of arananlar) {
@@ -507,23 +507,46 @@
                 if (!program[gunKey]) return;
                 const hedefNorm = norm(program[gunKey][rowIndex] || '');
                 if (!hedefNorm) return;
-                if (lblDers !== hedefNorm && !lblDers.includes(hedefNorm) && !hedefNorm.includes(lblDers)) return;
 
-                let matchFound = false;
+                // 1. Bu E-Okul kutucuğunun (checkbox) temsil ettiği en iyi Öğretmen/Ders atamasını bul
+                let enIyiAtama = null;
+                let enIyiAtamaSkor = 0;
+
                 for (const atama of atamalar) {
                     let hDers = norm(atama.ders);
                     const upperDers = atama.ders.toUpperCase();
                     if      (upperDers.includes('DİN KÜLTÜRÜ'))  hDers = norm('DİN KÜLT');
                     else if (upperDers.includes('REHBERLİK'))     hDers = norm('REHBERLİK');
+                    
                     const hOgr     = norm(atama.ogr);
-                    const dersUyar = (lblDers === hDers) || (lblDers.length > 3 && (lblDers.includes(hDers) || hDers.includes(lblDers)));
-                    const ogrUyar  = (lblOgr  === hOgr)  || (lblOgr.length  > 3 && (lblOgr.includes(hOgr)  || hOgr.includes(lblOgr)));
-                    if (dersUyar && ogrUyar) { matchFound = true; break; }
+                    const dersSkor = benzerlikSkoru(lblDers, hDers);
+                    const ogrSkor  = benzerlikSkoru(lblOgr, hOgr);
+                    
+                    // Öğretmen ismi uyuşuyorsa (>=70) ve ders skoru en iyisiyse kaydet
+                    if (ogrSkor >= 70 && dersSkor > enIyiAtamaSkor) {
+                        enIyiAtamaSkor = dersSkor;
+                        enIyiAtama = atama;
+                    }
                 }
 
-                if (matchFound && !chk.checked) {
-                    chk.checked = true; sayac++;
-                    chk.dispatchEvent(new Event('change', { bubbles: true }));
+                // 2. Eğer bu kutucuk PDF'teki bir atamaya denk geliyorsa, atamanın "Haftalık Programdaki" derse uyup uymadığını kontrol et
+                if (enIyiAtama && enIyiAtamaSkor >= 40) {
+                    const atamaDersNorm = norm(enIyiAtama.ders);
+                    const skorTimetable = Math.max(
+                        benzerlikSkoru(lblDers, hedefNorm),
+                        benzerlikSkoru(atamaDersNorm, hedefNorm)
+                    );
+                    
+                    // Haftalık programda ders adları çok kısa kısaltılabilir ("MAT", "S.TAR." gibi).
+                    // Bu yüzden includes veya 35 üstü bir benzerlik yeterlidir.
+                    const matchesTimetable = skorTimetable >= 35 || 
+                                             lblDers.includes(hedefNorm) || 
+                                             atamaDersNorm.includes(hedefNorm);
+
+                    if (matchesTimetable && !chk.checked) {
+                        chk.checked = true; sayac++;
+                        chk.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                 }
             });
             alert(`✅ Ek Ders Tablosu Dolduruldu!\n${sube} şubesi için ${sayac} onay kutusu işaretlendi.`);

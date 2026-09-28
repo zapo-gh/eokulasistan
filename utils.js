@@ -29,7 +29,11 @@ function benzerlikSkoru(a, b) {
 
     if (na.includes(nb) || nb.includes(na)) {
         const ratio = Math.min(na.length, nb.length) / Math.max(na.length, nb.length);
-        score = Math.max(score, 60 + ratio * 35);
+        let base = 20;
+        if (ratio >= 0.6) base = 60;
+        else if (ratio >= 0.4) base = 40;
+        
+        score = Math.max(score, base + ratio * 40);
     }
     
     return Math.round(score);
